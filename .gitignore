@@ -1,0 +1,7 @@
+work/
+dist/
+fontpatcher/
+*.7z
+*.zip
+*.ttc
+*.ttf
