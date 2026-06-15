@@ -1,0 +1,73 @@
+name: build
+on:
+  schedule:
+    - cron: "0 6 * * *"   # daily 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      build_needed: ${{ steps.c.outputs.build_needed }}
+      version: ${{ steps.c.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: c
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/check-upstream.sh >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check
+    if: needs.check.outputs.build_needed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fontforge jq unzip
+          pip3 install --quiet fonttools
+
+      - name: Build fonts
+        run: bash scripts/build-fonts.sh "$VERSION"
+
+      - name: Verify fonts
+        run: for f in dist/*.ttf dist/*.ttc; do bash scripts/verify-fonts.sh "$f"; done
+
+      - name: Package TTFs
+        run: (cd dist && zip -q SarasaTermSCNerdFontMono-TTF.zip SarasaTermSCNerdFontMono-*.ttf)
+
+      - name: Create / update release
+        run: |
+          gh release create "$VERSION" \
+            dist/SarasaTermSCNerdFontMono.ttc \
+            dist/SarasaTermSCNerdFontMono-TTF.zip \
+            --title "$VERSION" --notes "Auto-built from be5invis/Sarasa-Gothic $VERSION" \
+          || gh release upload "$VERSION" \
+            dist/SarasaTermSCNerdFontMono.ttc \
+            dist/SarasaTermSCNerdFontMono-TTF.zip --clobber
+
+      - name: Update cask
+        run: |
+          SHA=$(shasum -a 256 dist/SarasaTermSCNerdFontMono.ttc | awk '{print $1}')
+          URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/SarasaTermSCNerdFontMono.ttc"
+          bash scripts/update-cask.sh "$VERSION" "$SHA" "$URL"
+
+      - name: Commit cask + version
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/*.rb version.txt
+          git commit -m "release: ${VERSION}" && git push || echo "nothing to commit"
