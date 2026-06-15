@@ -26,4 +26,4 @@ main() {   # $1 version  $2 sha256  $3 url
   printf '%s\n' "$1" > "$DIR/version.txt"
 }
 
-[ "${BASH_SOURCE[0]}" = "${0}" ] && main "$@" || true
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then main "$@"; fi
