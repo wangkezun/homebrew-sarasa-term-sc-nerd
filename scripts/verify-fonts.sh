@@ -19,7 +19,8 @@ for nm in (names or [None]):
     label = nm or f.fontname
     if f[0x41].width != 500:   problems.append("%s: Latin A width %d != 500" % (label, f[0x41].width))
     if f[0x4F60].width != 1000: problems.append("%s: CJK 你 width %d != 1000" % (label, f[0x4F60].width))
-    if f.glyphcount >= limit:  problems.append("%s: glyphcount %d >= %d" % (label, f.glyphcount, limit))
+    gc = len(list(f.glyphs()))
+    if gc >= limit:  problems.append("%s: glyph count %d >= %d" % (label, gc, limit))
     if f.familyname != family_expected: problems.append("%s: family %r != %r" % (label, f.familyname, family_expected))
     for cp in (0xF07B, 0xE725, 0xF015):
         try: f[cp]
