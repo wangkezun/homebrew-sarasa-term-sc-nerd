@@ -292,7 +292,8 @@ for nm in (names or [None]):
     label = nm or f.fontname
     if f[0x41].width != 500:   problems.append("%s: Latin A width %d != 500" % (label, f[0x41].width))
     if f[0x4F60].width != 1000: problems.append("%s: CJK 你 width %d != 1000" % (label, f[0x4F60].width))
-    if f.glyphcount >= limit:  problems.append("%s: glyphcount %d >= %d" % (label, f.glyphcount, limit))
+    gc = len(list(f.glyphs()))
+    if gc >= limit:  problems.append("%s: glyph count %d >= %d" % (label, gc, limit))
     if f.familyname != family_expected: problems.append("%s: family %r != %r" % (label, f.familyname, family_expected))
     for cp in (0xF07B, 0xE725, 0xF015):
         try: f[cp]
@@ -348,12 +349,13 @@ if [ ! -x "$FP/font-patcher" ]; then
 fi
 
 # 2. download upstream SuperTTC archive for this version, extract the .ttc
+# Prefer the hinted SuperTTC .zip (extractable with plain unzip; excludes "Unhinted").
 asset_url="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN:-}" \
   "https://api.github.com/repos/${UPSTREAM_REPO}/releases/tags/${VERSION}" \
-  | jq -r '.assets[] | select(.name | test("SuperTTC.*\\.(7z|zip)$")) | .browser_download_url' | head -1)"
-[ -n "$asset_url" ] || { echo "no SuperTTC asset for ${VERSION}" >&2; exit 1; }
-curl -fSL -o "$WORK/sarasa.archive" "$asset_url"
-7z x -y -o"$WORK" "$WORK/sarasa.archive" >/dev/null
+  | jq -r '.assets[] | select(.name | test("^Sarasa-SuperTTC-[0-9][0-9.]*\\.zip$")) | .browser_download_url' | head -1)"
+[ -n "$asset_url" ] || { echo "no hinted SuperTTC zip for ${VERSION}" >&2; exit 1; }
+curl -fSL -o "$WORK/sarasa.zip" "$asset_url"
+unzip -oq "$WORK/sarasa.zip" -d "$WORK"
 TTC_SRC="$(find "$WORK" -iname 'Sarasa-SuperTTC*.ttc' | head -1)"
 [ -n "$TTC_SRC" ] || { echo "SuperTTC .ttc not found after extract" >&2; exit 1; }
 
@@ -463,7 +465,7 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y fontforge p7zip-full jq unzip
+          sudo apt-get install -y fontforge jq unzip
           pip3 install --quiet fonttools
 
       - name: Build fonts
@@ -495,7 +497,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/${{ '' }}*.rb version.txt
+          git add Casks/*.rb version.txt
           git commit -m "release: ${VERSION}" && git push || echo "nothing to commit"
 ```
 
