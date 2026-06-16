@@ -26,6 +26,10 @@ FONTPATCHER_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/${FON
 PATCH_FLAGS=(--single-width-glyphs --makegroups 1 --cell "0:540:-285:965")
 GLYPH_SETS=(--fontawesome --fontawesomeext --fontlogos --octicons --pomicons \
             --powerline --powerlineextra --powersymbols --codicons --weather)
-# NOTE: deliberately NO --material (Material Design ~7000 glyphs would break the 65535 sfnt limit).
+# Material Design (~6880 glyphs) can't be patched whole: with the full CJK base the font
+# would exceed the 65535 sfnt limit. Instead build-fonts.sh trims MD to a ~4900-glyph subset
+# (see scripts/make-md-subset.py) and adds it via --custom. Inputs:
+MD_GLYPH_SRC="src/glyphs/materialdesign/MaterialDesignIconsDesktop.ttf"  # relative to fontpatcher dir
+MD_WHITELIST="scripts/eza-lsd-md-icons.txt"                              # relative to repo root
 
 GLYPH_LIMIT=65535

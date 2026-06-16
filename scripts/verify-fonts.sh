@@ -22,7 +22,8 @@ for nm in (names or [None]):
     gc = len(list(f.glyphs()))
     if gc >= limit:  problems.append("%s: glyph count %d >= %d" % (label, gc, limit))
     if f.familyname != family_expected: problems.append("%s: family %r != %r" % (label, f.familyname, family_expected))
-    for cp in (0xF07B, 0xE725, 0xF015):
+    # FontAwesome/devicons/octicons (built-in sets) + Material Design (--custom subset, eza/lsd icons)
+    for cp in (0xF07B, 0xE725, 0xF015, 0xF0306, 0xF024F, 0xF075A):
         try: f[cp]
         except TypeError: problems.append("%s: missing icon U+%04X" % (label, cp))
     f.close()

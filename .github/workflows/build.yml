@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: "0 6 * * *"   # daily 06:00 UTC
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild even if the upstream version is unchanged"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -26,7 +31,7 @@ jobs:
 
   build:
     needs: check
-    if: needs.check.outputs.build_needed == 'true'
+    if: needs.check.outputs.build_needed == 'true' || github.event.inputs.force == 'true'
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

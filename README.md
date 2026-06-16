@@ -18,8 +18,10 @@ Then set your terminal font to **`SarasaTermSC Nerd Font Mono`**. Updates arrive
 
 - Family: `SarasaTermSC Nerd Font Mono`, weights Regular/Bold/Italic/BoldItalic (one TTC).
 - Patched with nerd-fonts font-patcher: `--single-width-glyphs --makegroups 1 --cell 0:540:-285:965`
-  plus all icon sets **except Material Design**. Dropping Material Design keeps the glyph count
-  under the 65535 sfnt limit; the icons terminals/lsd use live in the 4-hex PUA, not Material Design.
+  plus all icon sets, including a **trimmed Material Design** subset. The full ~6880-glyph Material
+  Design set would push the CJK base over the 65535 sfnt limit, so it's trimmed to ~4900 glyphs
+  (dropping outline-duplicate/vehicle/game/zodiac buckets) while force-keeping every icon eza and
+  lsd reference. See `scripts/make-md-subset.py`.
 
 ## How it updates
 
