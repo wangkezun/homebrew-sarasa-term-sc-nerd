@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/verify-fonts.sh <font.ttf|font.ttc>
-# Asserts: Latin A=500, CJK 你=1000, glyphs<65535, family name, key icons present.
-# For a .ttc, every face is checked.
+# Asserts: Latin A=500, CJK 你=1000, glyphs<65535, family name, key icons present,
+# post.isFixedPitch=1 (CoreText monospace trait). For a .ttc, every face is checked.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$DIR/config.sh"
@@ -31,3 +31,15 @@ if problems:
     print("VERIFY FAIL:"); [print("  - " + p) for p in problems]; sys.exit(1)
 print("VERIFY OK: %s (%d face[s])" % (path, len(names or [None])))
 ' "$FONT" "$PATCHED_FAMILY" "$GLYPH_LIMIT"
+
+# post.isFixedPitch drives the macOS/CoreText monospace trait; fontforge can't read it, use fontTools.
+python3 - "$FONT" <<'PY'
+import sys
+from fontTools.ttLib import TTFont, TTCollection
+path = sys.argv[1]
+fonts = TTCollection(path).fonts if path.lower().endswith(".ttc") else [TTFont(path)]
+bad = [i for i, f in enumerate(fonts) if f["post"].isFixedPitch != 1]
+if bad:
+    sys.exit("VERIFY FAIL: post.isFixedPitch != 1 on face(s) %s" % bad)
+print("VERIFY OK: isFixedPitch=1 (%d face[s])" % len(fonts))
+PY

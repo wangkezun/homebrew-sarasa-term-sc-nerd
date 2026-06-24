@@ -44,6 +44,20 @@ for w in "${WEIGHTS[@]}"; do
   mv "$out" "$DIST/SarasaTermSCNerdFontMono-$w.ttf"
 done
 
+# 4b. restore post.isFixedPitch=1 on each weight. Upstream Sarasa Term ships it as 1,
+# but fontforge's subfont extraction in step 4 recomputes it to 0 (the 2:1 dual width
+# makes advances non-uniform). macOS/CoreText reads this flag for its monospace trait,
+# so without it the family stops showing up in editors'/terminals' "fixed-width" pickers.
+for w in "${WEIGHTS[@]}"; do
+  python3 - "$DIST/SarasaTermSCNerdFontMono-$w.ttf" <<'PY'
+import sys
+from fontTools.ttLib import TTFont
+f = TTFont(sys.argv[1])
+f["post"].isFixedPitch = 1
+f.save(sys.argv[1])
+PY
+done
+
 # 5. merge into a single TTC (fonttools dedups identical tables)
 python3 - "$DIST/$TTC_NAME" \
   "$DIST/SarasaTermSCNerdFontMono-Regular.ttf" \
