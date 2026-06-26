@@ -44,16 +44,27 @@ for w in "${WEIGHTS[@]}"; do
   mv "$out" "$DIST/SarasaTermSCNerdFontMono-$w.ttf"
 done
 
-# 4b. restore post.isFixedPitch=1 on each weight. Upstream Sarasa Term ships it as 1,
+# 4b. normalize the family name + restore post.isFixedPitch=1 on each weight. Upstream Sarasa Term ships isFixedPitch as 1,
 # but fontforge's subfont extraction in step 4 recomputes it to 0 (the 2:1 dual width
 # makes advances non-uniform). macOS/CoreText reads this flag for its monospace trait,
 # so without it the family stops showing up in editors'/terminals' "fixed-width" pickers.
 for w in "${WEIGHTS[@]}"; do
-  python3 - "$DIST/SarasaTermSCNerdFontMono-$w.ttf" <<'PY'
+  python3 - "$DIST/SarasaTermSCNerdFontMono-$w.ttf" "$PATCHED_FAMILY" <<'PY'
 import sys
 from fontTools.ttLib import TTFont
 f = TTFont(sys.argv[1])
+family = sys.argv[2]
 f["post"].isFixedPitch = 1
+# makegroups bakes the enabled glyph-set list into the Typographic Family (name ID 16),
+# producing the very long "...Plus Font Awesome Plus..." name. macOS/CoreText prefers
+# name 16 over name 1 when present, so that long string is what shows up in Font Book and
+# font pickers. Re-assert one clean family on both the legacy (1) and typographic (16)
+# records so CoreText groups the four RIBBI weights under a single clean family name.
+# name 2/4 are already correct (RIBBI); 17 stays unset.
+name = f["name"]
+for nid in (1, 16):
+    for rec in [r for r in name.names if r.nameID == nid]:
+        name.setName(family, nid, rec.platformID, rec.platEncID, rec.langID)
 f.save(sys.argv[1])
 PY
 done
